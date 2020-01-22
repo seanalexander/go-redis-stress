@@ -13,10 +13,11 @@ import (
 var rdb *redis.Client
 var poolSize int
 var totalWorkers int
+var keyName string
 
 func init() {
-	if len(os.Args) != 3 {
-		fmt.Println("Usage:", os.Args[0], "totalWorkers poolSize")
+	if len(os.Args) <= 2 && len(os.Args) >= 5 {
+		fmt.Println("Usage:", os.Args[0], "totalWorkers poolSize [argKeyName]")
 		panic("nope")
 	}
 
@@ -37,6 +38,14 @@ func init() {
 		totalWorkers = 10
 	}
 
+	if len(os.Args) == 4 {
+		argKeyName := os.Args[3]
+		if err != nil {
+			argKeyName = ""
+		}
+		keyName = argKeyName
+	}
+
 	rdb = redis.NewClient(&redis.Options{
 		Addr:         ":6379",
 		DialTimeout:  10 * time.Second,
@@ -48,17 +57,18 @@ func init() {
 }
 
 func main() {
-	//exampleClient()
 	fmt.Println("keyName, totalWorkers, poolSize, methodName, elapsed_h, elapsed_n")
-	benchmarkRedis("419235kb")
-	benchmarkRedis("838470kb")
-	benchmarkRedis("1257705kb")
-	benchmarkRedis("1676940kb")
-	//exampleClient_Watch()
+	if len(keyName) > 0 {
+		benchmarkRedis(keyName)
+	} else {
+		benchmarkRedis("419235kb")
+		benchmarkRedis("838470kb")
+		benchmarkRedis("1257705kb")
+		benchmarkRedis("1676940kb")
+	}
 }
 
 func benchmarkRedis(keyName string) {
-	//const totalWorkers = 2
 	const methodName = "benchmarkRedis"
 	fmt.Printf("\"%s\", %d, %d, \"%s\"", keyName, totalWorkers, poolSize, methodName)
 
