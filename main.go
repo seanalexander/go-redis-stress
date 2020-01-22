@@ -2,76 +2,55 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
+	"github.com/seanalexander/go-redis-stress/redisconfig"
 )
 
 var rdb *redis.Client
-var poolSize int
-var totalWorkers int
-var keyName string
 
 func init() {
-	if len(os.Args) <= 2 && len(os.Args) >= 5 {
-		fmt.Println("Usage:", os.Args[0], "totalWorkers poolSize [argKeyName]")
-		panic("nope")
-	}
 
-	argTotalWorkers := os.Args[1]
-	argPoolSize := os.Args[2]
-
-	var err error
-
-	poolSize, err = strconv.Atoi(argPoolSize)
-	if err != nil {
-		fmt.Println("error: ", err)
-		poolSize = 0
-	}
-
-	totalWorkers, err = strconv.Atoi(argTotalWorkers)
-	if err != nil {
-		fmt.Println("error: ", err)
-		totalWorkers = 10
-	}
-
-	if len(os.Args) == 4 {
-		argKeyName := os.Args[3]
-		if err != nil {
-			argKeyName = ""
-		}
-		keyName = argKeyName
-	}
+	redisconfig.Set()
+	fmt.Println("redisconfig.Addr: ", redisconfig.Addr)
+	fmt.Println("redisconfig.KeyName: ", redisconfig.KeyName)
+	fmt.Println("redisconfig.PoolSize: ", redisconfig.PoolSize)
+	fmt.Println("redisconfig.TotalWorkers: ", redisconfig.TotalWorkers)
+	fmt.Println("redisconfig.MaxIterations: ", redisconfig.MaxIterations)
 
 	rdb = redis.NewClient(&redis.Options{
-		Addr:         ":6379",
+		Addr:         redisconfig.Addr,
 		DialTimeout:  10 * time.Second,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
-		PoolSize:     poolSize,
+		PoolSize:     redisconfig.PoolSize,
 		PoolTimeout:  30 * time.Second,
 	})
 }
 
 func main() {
 	fmt.Println("keyName, totalWorkers, poolSize, methodName, elapsed_h, elapsed_n")
-	if len(keyName) > 0 {
-		benchmarkRedis(keyName)
+	if len(redisconfig.KeyName) > 0 {
+		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
 	} else {
-		benchmarkRedis("419235kb")
-		benchmarkRedis("838470kb")
-		benchmarkRedis("1257705kb")
-		benchmarkRedis("1676940kb")
+		benchmarkRedis("4kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis("223504kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis("419235kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis("838470kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis("1257705kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
+		benchmarkRedis("1676940kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
 	}
 }
 
-func benchmarkRedis(keyName string) {
+func benchmarkRedis(keyName string, totalWorkers int, poolSize int, maxIterations int) {
 	const methodName = "benchmarkRedis"
 	fmt.Printf("\"%s\", %d, %d, \"%s\"", keyName, totalWorkers, poolSize, methodName)
-
+	fmt.Println()
 	defer timeTrack(time.Now(), methodName)
 
 	getStringValue := func(key string) (string, error) {
@@ -84,33 +63,31 @@ func benchmarkRedis(keyName string) {
 
 	var wg sync.WaitGroup
 	wg.Add(totalWorkers)
-	//fmt.Println("totalWorkers: ", totalWorkers)
-	for i := 0; i < totalWorkers; i++ {
-		go func() {
-			defer wg.Done()
-			//defer timeTrack(time.Now(), "Inside Loop")
 
-			if _, err := getStringValue(keyName); err != nil {
-				fmt.Println("getStringValue Error: ", err)
-			} else {
-				//fmt.Println("getStringValue: ", n)
+	for workerID := 1; workerID <= totalWorkers; workerID++ {
+		go func(workerID int) {
+			defer wg.Done()
+			for iTerations := 1; iTerations <= maxIterations; iTerations++ {
+				//defer timeTrack(time.Now(), fmt.Sprintf("Worker: %d, Loop: %d", workerID, iTerations))
+				//fmt.Println(fmt.Sprintf("Worker: %d, Loop: %d, Time: %s", workerID, n, time.Now()))
+				if _, err := getStringValue(keyName); err != nil {
+					fmt.Println("getStringValue Error: ", err)
+				} else {
+					//fmt.Println("getStringValue: ", n)
+				}
 			}
-		}()
+		}(workerID)
 	}
 	wg.Wait()
-
-	//n, err := rdb.Get("ALargeStringValue").Result()
 
 	if _, err := rdb.Get(keyName).Result(); err != nil {
 		fmt.Println("getStringValue Error: ", err)
 	} else {
 	}
-
-	// Output: ended with 100 <nil>
 }
 
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
-	fmt.Printf(", %s, %d\n", elapsed, elapsed)
-	//log.Printf("%s took %s", name, elapsed)
+	fmt.Printf(", %s, %s, %d\n", name, elapsed, elapsed)
+	//fmt.Printf(", %s, %d\n", elapsed, elapsed)
 }
