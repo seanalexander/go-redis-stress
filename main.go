@@ -34,9 +34,6 @@ func main() {
 	fmt.Println("keyName, totalWorkers, poolSize, methodName, elapsed_h, elapsed_n")
 	if len(redisconfig.KeyName) > 0 {
 		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
-		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
-		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
-		benchmarkRedis(redisconfig.KeyName, redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
 	} else {
 		benchmarkRedis("4kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
 		benchmarkRedis("223504kb", redisconfig.TotalWorkers, redisconfig.PoolSize, redisconfig.MaxIterations)
@@ -50,7 +47,7 @@ func main() {
 func benchmarkRedis(keyName string, totalWorkers int, poolSize int, maxIterations int) {
 	const methodName = "benchmarkRedis"
 	fmt.Printf("\"%s\", %d, %d, \"%s\"", keyName, totalWorkers, poolSize, methodName)
-	fmt.Println()
+	//fmt.Println()
 	defer timeTrack(time.Now(), methodName)
 
 	getStringValue := func(key string) (string, error) {
