@@ -7,4 +7,5 @@ require (
 	github.com/go-redis/redis/v7 v7.0.0-beta.5
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
+	golang.org/dl v0.0.0-20200113210548-1b9ab2716afa // indirect
 )
